@@ -38,7 +38,7 @@ end
 
 function main()
     dx = 10.0
-    z0 = 50000.0
+    z0 = (300 - 130 - 50)*1000.0
     datLen = 1024
     wavLen = 0.6328
     threads = (32,32)
@@ -46,7 +46,8 @@ function main()
 
     meanDiam = 50.0
     sdDiam = 10.0
-    rad = sdDiam*randn() + meanDiam
+    # rad = sdDiam*randn() + meanDiam
+    rad = 25.0
     print(rad)
 
     obj = CuArray{Float32}(undef,(datLen,datLen))
