@@ -18,6 +18,19 @@ function CuObjPlane(rad, x0, y0, dx, datLen, Plane)
     return
 end
 
+function CuObjPlane2(rad, x0, y0, dist, dx, datLen, Plane)
+    x = (blockIdx().x-1)*blockDim().x + threadIdx().x
+    y = (blockIdx().y-1)*blockDim().y + threadIdx().y
+    if x <= datLen && y <= datLen
+        if (x0-dist-Float32(x))^2 + (y0-Float32(y))^2 < (rad/dx)^2 || (x0+dist-Float32(x))^2 + (y0-Float32(y))^2 < (rad/dx)^2
+            Plane[y,x] = 0
+        else
+            Plane[y,x] = 1
+        end
+    end
+    return
+end
+
 function CuTransSqr(datLen, wavLen, dx, Plane)
     x = (blockIdx().x-1)*blockDim().x + threadIdx().x
     y = (blockIdx().y-1)*blockDim().y + threadIdx().y
@@ -38,7 +51,7 @@ end
 
 function main()
     dx = 10.0
-    z0 = (300 - 130 - 50)*1000.0
+    z0 = 50000.0
     datLen = 1024
     wavLen = 0.6328
     threads = (32,32)
@@ -54,16 +67,19 @@ function main()
     sqr = CuArray{Float32}(undef,(datLen,datLen))
     trans = CuArray{ComplexF32}(undef,(datLen,datLen))
     holo = CuArray{ComplexF32}(undef,(datLen,datLen))
-    @cuda threads = threads blocks = blocks CuObjPlane(rad,512,512,dx,datLen,obj)
+    # @cuda threads = threads blocks = blocks CuObjPlane(rad,512,512,dx,datLen,obj)
+    @cuda threads = threads blocks = blocks CuObjPlane2(rad,512,512,45/dx,dx,datLen,obj)
     @cuda threads = threads blocks = blocks CuTransSqr(datLen,wavLen,dx,sqr)
     @cuda threads = threads blocks = blocks CuTransFunc(z0,wavLen,datLen,sqr,trans)
     holo = fftshift(fft(obj)) .* trans
     holo = ifft(fftshift(holo))
-    img = Array(real.(holo .* conj.(holo)))
-    save("./test4.png",float.(img)/2)
+    img = Array(real.(holo .* conj.(holo)).^2)
+    img = float.(img)/2.0
+    width = 128
+    save("./doubledroplet.png",img[512-width:512+width-1,512-width:512+width-1])
     # imshow(float.(img)/2)
-    graph = img[512,512:1024]
-    plot(graph,title="rad = $rad", xlims=(0,200),ylims=(0.5,1.5))
+    # graph = img[512,512:1024]
+    # plot(graph,title="rad = $rad", xlims=(0,200),ylims=(0.5,1.5))
 end
 
 @time main()
